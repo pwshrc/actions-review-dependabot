@@ -1,0 +1,51 @@
+
+name: "Review Dependabot PR"
+description: "Adds approval to dependabot PRs for development dependencies and non-major production dependencies."
+inputs:
+  github_token:
+    description: "The GitHub token."
+    required: true
+  required-pr-user-login:
+    description: "The login of the user that is required to be the creator of the pull request."
+    required: true
+    default: 'dependabot[bot]'
+runs:
+  using: "composite"
+  # Based on: https://nicolasiensen.github.io/2022-07-23-automating-dependency-updates-with-dependabot-github-auto-merge-and-github-actions/
+  steps:
+  - name: user-ineligible-PR-notice
+    if: ${{ github.event.pull_request.user.login != inputs.required-pr-user-login }}
+    run: echo "This is *not* a PR authored by '${{ inputs.required-pr-user-login }}', ignoring." >> $GITHUB_STEP_SUMMARY
+  - name: user-eligible-PR-notice
+    if: ${{ github.event.pull_request.user.login == inputs.required-pr-user-login }}
+    run: echo "This *is* a PR authored by '${{ inputs.required-pr-user-login }}', inspecting." >> $GITHUB_STEP_SUMMARY
+  - name: Dependabot metadata
+    if: ${{ github.event.pull_request.user.login == inputs.required-pr-user-login }}
+    id: dependabot-metadata
+    uses: dependabot/fetch-metadata@v1.3.1
+  - name: Enable auto-merge for Dependabot PRs
+    if: ${{ github.event.pull_request.user.login == inputs.required-pr-user-login }}
+    run: gh pr merge --auto --merge "$PR_URL"
+    env:
+      PR_URL: ${{ github.event.pull_request.html_url }}
+      GITHUB_TOKEN: ${{ inputs.github_token }}
+  - name: Approve patch and minor updates
+    if: ${{ (steps.dependabot-metadata.outputs.update-type == 'version-update:semver-patch' || steps.dependabot-metadata.outputs.update-type == 'version-update:semver-minor') && (github.event.pull_request.user.login == inputs.required-pr-user-login) }}
+    run: gh pr review $PR_URL --approve -b "I'm **approving** this pull request because **it includes a patch or minor update**"
+    env:
+      PR_URL: ${{github.event.pull_request.html_url}}
+      GITHUB_TOKEN: ${{ inputs.github_token }}
+  - name: Approve major updates of development dependencies
+    if: ${{ (steps.dependabot-metadata.outputs.update-type == 'version-update:semver-major' && steps.dependabot-metadata.outputs.dependency-type == 'direct:development') && (github.event.pull_request.user.login == inputs.required-pr-user-login) }}
+    run: gh pr review $PR_URL --approve -b "I'm **approving** this pull request because **it includes a major update of a dependency used only in development**"
+    env:
+      PR_URL: ${{github.event.pull_request.html_url}}
+      GITHUB_TOKEN: ${{ inputs.github_token }}
+  - name: Comment on major updates of non-development dependencies
+    if: ${{ (steps.dependabot-metadata.outputs.update-type == 'version-update:semver-major' && steps.dependabot-metadata.outputs.dependency-type == 'direct:production') && (github.event.pull_request.user.login == inputs.required-pr-user-login) }}
+    run: |
+      gh pr comment $PR_URL --body "I'm **not approving** this PR because **it includes a major update of a dependency used in production**"
+      gh pr edit $PR_URL --add-label "requires-manual-qa"
+    env:
+      PR_URL: ${{ github.event.pull_request.html_url }}
+      GITHUB_TOKEN: ${{ inputs.github_token }}
