@@ -15,9 +15,11 @@ runs:
   steps:
   - name: user-ineligible-PR-notice
     if: ${{ github.event.pull_request.user.login != inputs.required-pr-user-login }}
+    shell: bash
     run: echo "This is *not* a PR authored by '${{ inputs.required-pr-user-login }}', ignoring." >> $GITHUB_STEP_SUMMARY
   - name: user-eligible-PR-notice
     if: ${{ github.event.pull_request.user.login == inputs.required-pr-user-login }}
+    shell: bash
     run: echo "This *is* a PR authored by '${{ inputs.required-pr-user-login }}', inspecting." >> $GITHUB_STEP_SUMMARY
   - name: Dependabot metadata
     if: ${{ github.event.pull_request.user.login == inputs.required-pr-user-login }}
