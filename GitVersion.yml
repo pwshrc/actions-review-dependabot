@@ -1,3 +1,4 @@
+next-version: 0.3
 mode: ContinuousDelivery
 # This version-bumping scheme requires semantic commits authored using Gitmoji.
 # For more information on Gitmoji, see: https://gitmoji.dev/.
