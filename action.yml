@@ -5,6 +5,9 @@ inputs:
   github_token:
     description: "The GitHub token."
     required: true
+  merge-mode:
+    description: "One of 'merge', 'squash', or 'rebase'."
+    required: true
   required-pr-user-login:
     description: "The login of the user that is required to be the creator of the pull request."
     required: true
@@ -31,7 +34,7 @@ runs:
       PR_URL: "${{ github.event.pull_request.html_url }}"
       GITHUB_TOKEN: "${{ inputs.github_token }}"
     shell: bash
-    run: gh pr merge --auto --merge "$PR_URL"
+    run: gh pr merge --auto --${{ inputs.merge-mode }} "$PR_URL"
   - name: Approve patch and minor updates
     if: ${{ (steps.dependabot-metadata.outputs.update-type == 'version-update:semver-patch' || steps.dependabot-metadata.outputs.update-type == 'version-update:semver-minor') && (github.event.pull_request.user.login == inputs.required-pr-user-login) }}
     env:
