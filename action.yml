@@ -27,7 +27,7 @@ runs:
   - name: Dependabot metadata
     if: github.event.pull_request.user.login == inputs.required-pr-user-login
     id: dependabot-metadata
-    uses: dependabot/fetch-metadata@v1.6.0
+    uses: dependabot/fetch-metadata@v1.7.0
   - name: Enable auto-merge for Dependabot PRs
     if: github.event.pull_request.user.login == inputs.required-pr-user-login
     env:
